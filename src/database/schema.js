@@ -187,6 +187,28 @@ export async function initializeDatabase() {
 
 
     -- --------------------------------------------------
+    -- Favorites
+    -- --------------------------------------------------
+
+    CREATE TABLE IF NOT EXISTS favorites (
+      id SERIAL PRIMARY KEY,
+
+      anime_id INTEGER
+        REFERENCES anime(id)
+        ON DELETE CASCADE,
+
+      movie_id INTEGER
+        REFERENCES movies(id)
+        ON DELETE CASCADE,
+
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+      UNIQUE(anime_id),
+      UNIQUE(movie_id)
+    );
+
+
+    -- --------------------------------------------------
     -- Browser Downloads
     -- --------------------------------------------------
 
@@ -255,6 +277,14 @@ export async function initializeDatabase() {
 
     CREATE INDEX IF NOT EXISTS idx_downloads_updated
       ON downloads(updated_at);
+
+
+    CREATE INDEX IF NOT EXISTS idx_favorites_anime_id
+      ON favorites(anime_id);
+
+
+    CREATE INDEX IF NOT EXISTS idx_favorites_movie_id
+      ON favorites(movie_id);
   `);
 
   console.log("Database initialized");
