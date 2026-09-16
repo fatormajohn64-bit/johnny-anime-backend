@@ -7,25 +7,14 @@ import {
 
 const router = Router();
 
-
-// --------------------------------------------------
-// Sync episodes from AniList
-// --------------------------------------------------
-
 router.post(
   "/anilist/:anilistId",
   syncEpisodes
 );
 
-
-// --------------------------------------------------
-// Get synced episodes for an anime
-// --------------------------------------------------
-
 router.get(
   "/anime/:animeId",
   getEpisodes
 );
-
 
 export default router;
