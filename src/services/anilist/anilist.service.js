@@ -1,24 +1,40 @@
-const ANILIST_API_URL =
-  process.env.ANILIST_API_URL || "https://graphql.anilist.co";
+import { anilistConfig } from "../../config/api.js";
 
-async function anilistRequest(query, variables = {}) {
-  const response = await fetch(ANILIST_API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json"
-    },
-    body: JSON.stringify({
-      query,
-      variables
-    })
-  });
+// --------------------------------------------------
+// AniList API request
+// --------------------------------------------------
 
-  const data = await response.json();
+async function anilistRequest(
+  query,
+  variables = {}
+) {
+  const response = await fetch(
+    anilistConfig.baseUrl,
+    {
+      method: "POST",
 
-  if (!response.ok || data.errors) {
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json"
+      },
+
+      body: JSON.stringify({
+        query,
+        variables
+      })
+    }
+  );
+
+  const data =
+    await response.json();
+
+  if (
+    !response.ok ||
+    data.errors
+  ) {
     const message =
-      data.errors?.[0]?.message || "AniList request failed";
+      data.errors?.[0]?.message ||
+      "AniList request failed";
 
     throw new Error(message);
   }
@@ -26,10 +42,20 @@ async function anilistRequest(query, variables = {}) {
   return data.data;
 }
 
-export async function searchAnime(search) {
+
+// --------------------------------------------------
+// Search anime
+// --------------------------------------------------
+
+export async function searchAnime(
+  search
+) {
   const query = `
     query ($search: String) {
-      Page(page: 1, perPage: 20) {
+      Page(
+        page: 1,
+        perPage: 20
+      ) {
         media(
           search: $search,
           type: ANIME,
@@ -47,6 +73,7 @@ export async function searchAnime(search) {
           type
           format
           status
+
           episodes
           duration
 
@@ -58,7 +85,11 @@ export async function searchAnime(search) {
             medium
           }
 
-          description(asHtml: false)
+          bannerImage
+
+          description(
+            asHtml: false
+          )
 
           genres
 
@@ -80,17 +111,31 @@ export async function searchAnime(search) {
     }
   `;
 
-  const data = await anilistRequest(query, {
-    search
-  });
+  const data =
+    await anilistRequest(
+      query,
+      {
+        search
+      }
+    );
 
   return data.Page.media;
 }
 
-export async function getAnimeById(id) {
+
+// --------------------------------------------------
+// Get anime by AniList ID
+// --------------------------------------------------
+
+export async function getAnimeById(
+  id
+) {
   const query = `
     query ($id: Int) {
-      Media(id: $id, type: ANIME) {
+      Media(
+        id: $id,
+        type: ANIME
+      ) {
         id
         idMal
 
@@ -103,6 +148,7 @@ export async function getAnimeById(id) {
         type
         format
         status
+
         episodes
         duration
 
@@ -114,7 +160,11 @@ export async function getAnimeById(id) {
           medium
         }
 
-        description(asHtml: false)
+        bannerImage
+
+        description(
+          asHtml: false
+        )
 
         genres
 
@@ -150,6 +200,8 @@ export async function getAnimeById(id) {
               coverImage {
                 medium
               }
+
+              bannerImage
             }
           }
         }
@@ -157,9 +209,13 @@ export async function getAnimeById(id) {
     }
   `;
 
-  const data = await anilistRequest(query, {
-    id: Number(id)
-  });
+  const data =
+    await anilistRequest(
+      query,
+      {
+        id: Number(id)
+      }
+    );
 
   return data.Media;
 }
