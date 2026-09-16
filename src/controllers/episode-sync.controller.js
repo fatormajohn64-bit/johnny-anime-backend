@@ -1,9 +1,9 @@
 import {
-  syncEpisodesFromAniList,
-  getEpisodesForAnime
+  syncEpisodes,
+  getEpisodes
 } from "../services/library/episode-sync.service.js";
 
-export async function syncEpisodes(
+export async function syncEpisodesController(
   req,
   res,
   next
@@ -25,7 +25,7 @@ export async function syncEpisodes(
     }
 
     const result =
-      await syncEpisodesFromAniList(
+      await syncEpisodes(
         anilistId
       );
 
@@ -38,7 +38,7 @@ export async function syncEpisodes(
   }
 }
 
-export async function getEpisodes(
+export async function getEpisodesController(
   req,
   res,
   next
@@ -60,7 +60,7 @@ export async function getEpisodes(
     }
 
     const result =
-      await getEpisodesForAnime(
+      await getEpisodes(
         animeId
       );
 
