@@ -227,5 +227,5 @@ export async function getEpisodeSyncSummary(
   return {
     anime: animeResult.rows[0],
     seasons: seasonsResult.rows
-  };.
+  };
 }
