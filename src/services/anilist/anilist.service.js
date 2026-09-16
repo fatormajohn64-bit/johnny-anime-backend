@@ -1,4 +1,5 @@
 import { anilistConfig } from "../../config/api.js";
+import { httpJson } from "../../utils/http-client.js";
 
 // --------------------------------------------------
 // AniList API request
@@ -8,30 +9,25 @@ async function anilistRequest(
   query,
   variables = {}
 ) {
-  const response = await fetch(
-    anilistConfig.baseUrl,
-    {
-      method: "POST",
+  const response =
+    await httpJson(
+      anilistConfig.baseUrl,
+      {
+        method: "POST",
 
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json"
-      },
+        body: {
+          query,
+          variables
+        },
 
-      body: JSON.stringify({
-        query,
-        variables
-      })
-    }
-  );
+        timeout: 15000
+      }
+    );
 
   const data =
-    await response.json();
+    response.data;
 
-  if (
-    !response.ok ||
-    data.errors
-  ) {
+  if (data.errors) {
     const message =
       data.errors?.[0]?.message ||
       "AniList request failed";
