@@ -43,6 +43,10 @@ import {
 } from "./middleware/error-handler.js";
 
 
+// --------------------------------------------------
+// App
+// --------------------------------------------------
+
 const app = express();
 
 
@@ -51,11 +55,7 @@ const app = express();
 // --------------------------------------------------
 
 const PORT = env.port;
-
 const HOST = "0.0.0.0";
-
-const FRONTEND_URL =
-  env.frontendUrl;
 
 
 // --------------------------------------------------
@@ -73,7 +73,7 @@ app.use(
 
 app.use(
   cors({
-    origin: FRONTEND_URL
+    origin: env.frontendUrl
   })
 );
 
@@ -90,7 +90,7 @@ app.use(
 
 
 // --------------------------------------------------
-// Root
+// Root route
 // --------------------------------------------------
 
 app.get(
@@ -108,7 +108,7 @@ app.get(
 
 
 // --------------------------------------------------
-// Health
+// Health route
 // --------------------------------------------------
 
 app.get(
@@ -128,7 +128,7 @@ app.get(
 
 
 // --------------------------------------------------
-// API routes
+// Anime
 // --------------------------------------------------
 
 app.use(
@@ -136,130 +136,260 @@ app.use(
   animeRoutes
 );
 
+
+// --------------------------------------------------
+// Library
+// --------------------------------------------------
+
 app.use(
   "/api/library",
   libraryRoutes
 );
+
+
+// --------------------------------------------------
+// Seasons and episodes
+// --------------------------------------------------
 
 app.use(
   "/api",
   episodesRoutes
 );
 
+
+// --------------------------------------------------
+// Video sources
+// --------------------------------------------------
+
 app.use(
   "/api/video-sources",
   videoSourceRoutes
 );
+
+
+// --------------------------------------------------
+// Watch progress
+// --------------------------------------------------
 
 app.use(
   "/api/watch-progress",
   watchProgressRoutes
 );
 
+
+// --------------------------------------------------
+// Player
+// --------------------------------------------------
+
 app.use(
   "/api/player",
   playerRoutes
 );
+
+
+// --------------------------------------------------
+// Anime sync
+// --------------------------------------------------
 
 app.use(
   "/api/anime-sync",
   animeSyncRoutes
 );
 
+
+// --------------------------------------------------
+// Episode sync
+// --------------------------------------------------
+
 app.use(
   "/api/episode-sync",
   episodeSyncRoutes
 );
+
+
+// --------------------------------------------------
+// Downloads
+// --------------------------------------------------
 
 app.use(
   "/api/downloads",
   downloadRoutes
 );
 
+
+// --------------------------------------------------
+// Movies
+// --------------------------------------------------
+
 app.use(
   "/api/movies",
   movieRoutes
 );
+
+
+// --------------------------------------------------
+// Dashboard
+// --------------------------------------------------
 
 app.use(
   "/api/dashboard",
   libraryDashboardRoutes
 );
 
+
+// --------------------------------------------------
+// Discovery
+// --------------------------------------------------
+
 app.use(
   "/api/discovery",
   discoveryRoutes
 );
+
+
+// --------------------------------------------------
+// Favorites
+// --------------------------------------------------
 
 app.use(
   "/api/favorites",
   favoritesRoutes
 );
 
+
+// --------------------------------------------------
+// Settings
+// --------------------------------------------------
+
 app.use(
   "/api/settings",
   settingsRoutes
 );
+
+
+// --------------------------------------------------
+// Activity
+// --------------------------------------------------
 
 app.use(
   "/api/activity",
   activityRoutes
 );
 
+
+// --------------------------------------------------
+// Anime details
+// --------------------------------------------------
+
 app.use(
   "/api/anime-details",
   animeDetailRoutes
 );
+
+
+// --------------------------------------------------
+// Episode navigation
+// --------------------------------------------------
 
 app.use(
   "/api/episode-navigation",
   episodeNavigationRoutes
 );
 
+
+// --------------------------------------------------
+// Season navigation
+// --------------------------------------------------
+
 app.use(
   "/api/season-navigation",
   seasonNavigationRoutes
 );
+
+
+// --------------------------------------------------
+// Episode queue
+// --------------------------------------------------
 
 app.use(
   "/api/episode-queue",
   episodeQueueRoutes
 );
 
+
+// --------------------------------------------------
+// Continue watching
+// --------------------------------------------------
+
 app.use(
   "/api/continue-watching",
   continueWatchingRoutes
 );
+
+
+// --------------------------------------------------
+// Watch history
+// --------------------------------------------------
 
 app.use(
   "/api/watch-history",
   watchHistoryRoutes
 );
 
+
+// --------------------------------------------------
+// Resume
+// --------------------------------------------------
+
 app.use(
   "/api/resume",
   resumeRoutes
 );
+
+
+// --------------------------------------------------
+// Player completion
+// --------------------------------------------------
 
 app.use(
   "/api/player-completion",
   playerCompletionRoutes
 );
 
+
+// --------------------------------------------------
+// Source selection
+// --------------------------------------------------
+
 app.use(
   "/api/source-selection",
   sourceSelectionRoutes
 );
+
+
+// --------------------------------------------------
+// Download manager
+// --------------------------------------------------
 
 app.use(
   "/api/download-manager",
   downloadManagerRoutes
 );
 
+
+// --------------------------------------------------
+// Database health
+// --------------------------------------------------
+
 app.use(
   "/api/database",
   databaseHealthRoutes
 );
+
+
+// --------------------------------------------------
+// Maintenance
+// --------------------------------------------------
 
 app.use(
   "/api/maintenance",
@@ -268,7 +398,7 @@ app.use(
 
 
 // --------------------------------------------------
-// 404
+// 404 handler
 // --------------------------------------------------
 
 app.use(
@@ -363,13 +493,3 @@ async function startServer() {
 startServer();
 
 export default app;
-
-That's the Render-ready "server.js". The important change is:
-
-const HOST = "0.0.0.0";
-
-and:
-
-app.listen(PORT, HOST, ...)
-
-Now save the file and push it to GitHub. Don't deploy manually yet—we'll set up the Render PostgreSQL database and environment variables first.
