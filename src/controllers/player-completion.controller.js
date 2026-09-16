@@ -1,13 +1,8 @@
 import {
-  completeEpisode
+  completeEpisode as completeEpisodeService
 } from "../services/video/player-completion.service.js";
 
-
-// --------------------------------------------------
-// Complete episode
-// --------------------------------------------------
-
-export async function complete(
+export async function completeEpisode(
   req,
   res,
   next
@@ -29,7 +24,7 @@ export async function complete(
     }
 
     const result =
-      await completeEpisode(
+      await completeEpisodeService(
         episodeId
       );
 
@@ -37,7 +32,6 @@ export async function complete(
       success: true,
       result
     });
-
   } catch (error) {
     next(error);
   }
