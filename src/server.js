@@ -42,21 +42,24 @@ import {
   errorHandler
 } from "./middleware/error-handler.js";
 
+
 const app = express();
 
 
 // --------------------------------------------------
-// Basic configuration
+// Server configuration
 // --------------------------------------------------
 
 const PORT = env.port;
+
+const HOST = "0.0.0.0";
 
 const FRONTEND_URL =
   env.frontendUrl;
 
 
 // --------------------------------------------------
-// Security middleware
+// Security
 // --------------------------------------------------
 
 app.use(
@@ -76,7 +79,7 @@ app.use(
 
 
 // --------------------------------------------------
-// Body parsing
+// JSON body parser
 // --------------------------------------------------
 
 app.use(
@@ -265,7 +268,7 @@ app.use(
 
 
 // --------------------------------------------------
-// 404 handler
+// 404
 // --------------------------------------------------
 
 app.use(
@@ -293,12 +296,14 @@ async function startServer() {
     const server =
       app.listen(
         PORT,
+        HOST,
         () => {
           console.log(
-            `Johnny Anime Vault Backend running on port ${PORT}`
+            `Johnny Anime Vault Backend running on ${HOST}:${PORT}`
           );
         }
       );
+
 
     // ----------------------------------------------
     // Graceful shutdown
@@ -320,6 +325,7 @@ async function startServer() {
               );
 
               process.exit(0);
+
             } catch (error) {
               console.error(
                 "Error closing database:",
@@ -331,6 +337,7 @@ async function startServer() {
           }
         );
       };
+
 
     process.on(
       "SIGTERM",
@@ -352,6 +359,17 @@ async function startServer() {
   }
 }
 
+
 startServer();
 
 export default app;
+
+That's the Render-ready "server.js". The important change is:
+
+const HOST = "0.0.0.0";
+
+and:
+
+app.listen(PORT, HOST, ...)
+
+Now save the file and push it to GitHub. Don't deploy manually yet—we'll set up the Render PostgreSQL database and environment variables first.
