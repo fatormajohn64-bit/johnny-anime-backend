@@ -1,3 +1,7 @@
+// --------------------------------------------------
+// Get pagination values
+// --------------------------------------------------
+
 export function getPagination(
   query,
   defaults = {}
@@ -42,5 +46,32 @@ export function getPagination(
   return {
     limit,
     offset
+  };
+}
+
+
+// --------------------------------------------------
+// Create pagination response
+// --------------------------------------------------
+
+export function paginationResponse(
+  items,
+  limit,
+  offset,
+  total
+) {
+  return {
+    items,
+
+    pagination: {
+      limit,
+      offset,
+
+      total,
+
+      hasMore:
+        offset + items.length <
+        total
+    }
   };
 }
