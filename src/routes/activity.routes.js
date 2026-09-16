@@ -6,15 +6,9 @@ import {
 
 const router = Router();
 
-
-// --------------------------------------------------
-// Get activity
-// --------------------------------------------------
-
 router.get(
   "/",
   getActivity
 );
-
 
 export default router;
