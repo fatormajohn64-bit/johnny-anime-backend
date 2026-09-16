@@ -1,4 +1,4 @@
-import "dotenv/config";
+import env from "./env.js";
 
 // --------------------------------------------------
 // AniList
@@ -6,8 +6,7 @@ import "dotenv/config";
 
 export const anilistConfig = {
   baseUrl:
-    process.env.ANILIST_API_URL ||
-    "https://graphql.anilist.co"
+    env.anilistApiUrl
 };
 
 
@@ -17,7 +16,7 @@ export const anilistConfig = {
 
 export const databaseConfig = {
   url:
-    process.env.DATABASE_URL || null
+    env.databaseUrl
 };
 
 
@@ -27,15 +26,13 @@ export const databaseConfig = {
 
 export const serverConfig = {
   port:
-    Number(process.env.PORT) || 10000,
+    env.port,
 
   frontendUrl:
-    process.env.FRONTEND_URL ||
-    "http://localhost:5500",
+    env.frontendUrl,
 
   nodeEnv:
-    process.env.NODE_ENV ||
-    "development"
+    env.nodeEnv
 };
 
 
@@ -44,9 +41,15 @@ export const serverConfig = {
 // --------------------------------------------------
 
 export const apiConfig = {
-  anilist: anilistConfig,
-  database: databaseConfig,
-  server: serverConfig
+  anilist:
+    anilistConfig,
+
+  database:
+    databaseConfig,
+
+  server:
+    serverConfig
 };
+
 
 export default apiConfig;
