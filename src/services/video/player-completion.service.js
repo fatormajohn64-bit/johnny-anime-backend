@@ -1,242 +1,258 @@
 import { query } from "../../database/database.js";
 
+
 // --------------------------------------------------
-// Complete episode and find next episode
+// Complete an episode and determine what comes next
 // --------------------------------------------------
 
-export async function completeEpisodeAndGetNext(
+export async function completeEpisode(
   episodeId
 ) {
-  const client = await query(
-    `
-    UPDATE watch_progress
-    SET
-      completed = true,
-      updated_at = CURRENT_TIMESTAMP
-    WHERE episode_id = $1
-    RETURNING *
-    `,
-    [episodeId]
-  );
+  const id = Number(episodeId);
 
-  // If progress does not exist yet,
-  // create a completed progress record.
-  if (!client.rows.length) {
-    await query(
-      `
-      INSERT INTO watch_progress (
-        episode_id,
-        position_seconds,
-        duration_seconds,
-        completed
-      )
-      SELECT
-        e.id,
-        COALESCE(e.duration, 0),
-        COALESCE(e.duration, 0),
-        true
-      FROM episodes e
-      WHERE e.id = $1
-      ON CONFLICT (episode_id)
-      DO UPDATE SET
-        completed = true,
-        updated_at = CURRENT_TIMESTAMP
-      `,
-      [episodeId]
+  if (
+    !Number.isInteger(id) ||
+    id <= 0
+  ) {
+    throw new Error(
+      "Invalid episode ID"
     );
   }
 
-  const currentResult = await query(
-    `
-    SELECT
-      e.id,
-      e.episode_number,
-      e.title,
-      e.season_id,
 
-      s.season_number,
-      s.anime_id
+  // ----------------------------------------------
+  // Get current episode
+  // ----------------------------------------------
 
-    FROM episodes e
+  const currentResult =
+    await query(
+      `
+        SELECT
+          e.id,
+          e.episode_number,
+          e.title,
+          e.season_id,
 
-    JOIN seasons s
-      ON s.id = e.season_id
+          s.season_number,
+          s.anime_id
 
-    WHERE e.id = $1
-    `,
-    [episodeId]
-  );
+        FROM episodes e
 
-  if (!currentResult.rows.length) {
-    return null;
+        INNER JOIN seasons s
+          ON s.id = e.season_id
+
+        WHERE e.id = $1
+
+        LIMIT 1
+      `,
+      [id]
+    );
+
+
+  if (
+    currentResult.rows.length === 0
+  ) {
+    throw new Error(
+      "Episode not found"
+    );
   }
+
 
   const current =
     currentResult.rows[0];
 
-  // --------------------------------------------------
-  // Find next episode in current season
-  // --------------------------------------------------
 
-  const nextEpisodeResult = await query(
+  // ----------------------------------------------
+  // Mark current episode completed
+  // ----------------------------------------------
+
+  await query(
     `
-    SELECT
-      e.id,
-      e.episode_number,
-      e.title,
-      e.thumbnail,
-      e.duration
+      INSERT INTO watch_progress (
+        episode_id,
+        position_seconds,
+        duration_seconds,
+        completed,
+        updated_at
+      )
 
-    FROM episodes e
+      SELECT
+        e.id,
+        COALESCE(
+          wp.position_seconds,
+          0
+        ),
+        COALESCE(
+          wp.duration_seconds,
+          0
+        ),
+        TRUE,
+        CURRENT_TIMESTAMP
 
-    WHERE
-      e.season_id = $1
-      AND e.episode_number > $2
+      FROM episodes e
 
-    ORDER BY
-      e.episode_number ASC
+      LEFT JOIN watch_progress wp
+        ON wp.episode_id = e.id
 
-    LIMIT 1
+      WHERE e.id = $1
+
+      ON CONFLICT (episode_id)
+
+      DO UPDATE SET
+        completed = TRUE,
+        updated_at = CURRENT_TIMESTAMP
     `,
-    [
-      current.season_id,
-      current.episode_number
-    ]
+    [id]
   );
 
-  if (nextEpisodeResult.rows.length) {
-    return {
-      completedEpisode: {
-        id: current.id,
-        episodeNumber:
-          current.episode_number,
-        title: current.title
-      },
 
-      next: {
-        type: "episode",
-        sameSeason: true,
-        ...nextEpisodeResult.rows[0]
-      }
+  // ----------------------------------------------
+  // Find next episode in same season
+  // ----------------------------------------------
+
+  const nextEpisodeResult =
+    await query(
+      `
+        SELECT
+          e.id,
+          e.episode_number,
+          e.title,
+          e.season_id
+
+        FROM episodes e
+
+        WHERE
+          e.season_id = $1
+          AND e.episode_number > $2
+
+        ORDER BY
+          e.episode_number ASC
+
+        LIMIT 1
+      `,
+      [
+        current.season_id,
+        current.episode_number
+      ]
+    );
+
+
+  if (
+    nextEpisodeResult.rows.length > 0
+  ) {
+    return {
+      completed: true,
+
+      animeCompleted: false,
+
+      currentEpisode: current,
+
+      nextEpisode:
+        nextEpisodeResult.rows[0],
+
+      nextSeason: null
     };
   }
 
-  // --------------------------------------------------
-  // Current season is finished.
-  // Find next season.
-  // --------------------------------------------------
 
-  const nextSeasonResult = await query(
-    `
-    SELECT
-      s.id,
-      s.season_number,
-      s.title
+  // ----------------------------------------------
+  // No more episodes in this season
+  // Find next season
+  // ----------------------------------------------
 
-    FROM seasons s
+  const nextSeasonResult =
+    await query(
+      `
+        SELECT
+          s.id,
+          s.season_number,
+          s.title,
+          s.anime_id
 
-    WHERE
-      s.anime_id = $1
-      AND s.season_number > $2
+        FROM seasons s
 
-    ORDER BY
-      s.season_number ASC
+        WHERE
+          s.anime_id = $1
+          AND s.season_number > $2
 
-    LIMIT 1
-    `,
-    [
-      current.anime_id,
-      current.season_number
-    ]
-  );
+        ORDER BY
+          s.season_number ASC
 
-  if (!nextSeasonResult.rows.length) {
-    return {
-      completedEpisode: {
-        id: current.id,
-        episodeNumber:
-          current.episode_number,
-        title: current.title
-      },
+        LIMIT 1
+      `,
+      [
+        current.anime_id,
+        current.season_number
+      ]
+    );
 
-      next: null,
 
-      animeCompleted: true
-    };
+  if (
+    nextSeasonResult.rows.length > 0
+  ) {
+    const nextSeason =
+      nextSeasonResult.rows[0];
+
+
+    // --------------------------------------------
+    // First episode of next season
+    // --------------------------------------------
+
+    const firstEpisodeResult =
+      await query(
+        `
+          SELECT
+            e.id,
+            e.episode_number,
+            e.title,
+            e.season_id
+
+          FROM episodes e
+
+          WHERE
+            e.season_id = $1
+
+          ORDER BY
+            e.episode_number ASC
+
+          LIMIT 1
+        `,
+        [nextSeason.id]
+      );
+
+
+    if (
+      firstEpisodeResult.rows.length > 0
+    ) {
+      return {
+        completed: true,
+
+        animeCompleted: false,
+
+        currentEpisode: current,
+
+        nextEpisode:
+          firstEpisodeResult.rows[0],
+
+        nextSeason
+      };
+    }
   }
 
-  const nextSeason =
-    nextSeasonResult.rows[0];
 
-  // --------------------------------------------------
-  // First episode of next season
-  // --------------------------------------------------
-
-  const firstEpisodeResult = await query(
-    `
-    SELECT
-      e.id,
-      e.episode_number,
-      e.title,
-      e.thumbnail,
-      e.duration
-
-    FROM episodes e
-
-    WHERE
-      e.season_id = $1
-
-    ORDER BY
-      e.episode_number ASC
-
-    LIMIT 1
-    `,
-    [nextSeason.id]
-  );
-
-  if (!firstEpisodeResult.rows.length) {
-    return {
-      completedEpisode: {
-        id: current.id,
-        episodeNumber:
-          current.episode_number,
-        title: current.title
-      },
-
-      next: null,
-
-      nextSeason: {
-        id: nextSeason.id,
-        number:
-          nextSeason.season_number,
-        title:
-          nextSeason.title
-      }
-    };
-  }
+  // ----------------------------------------------
+  // Anime has no more episodes
+  // ----------------------------------------------
 
   return {
-    completedEpisode: {
-      id: current.id,
-      episodeNumber:
-        current.episode_number,
-      title: current.title
-    },
+    completed: true,
 
-    next: {
-      type: "episode",
-      sameSeason: false,
+    animeCompleted: true,
 
-      seasonId:
-        nextSeason.id,
+    currentEpisode: current,
 
-      seasonNumber:
-        nextSeason.season_number,
+    nextEpisode: null,
 
-      seasonTitle:
-        nextSeason.title,
-
-      ...firstEpisodeResult.rows[0]
-    }
+    nextSeason: null
   };
 }
