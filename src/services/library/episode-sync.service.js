@@ -1,158 +1,117 @@
-import { query } from "../../database/database.js";
-
 import {
   getAnimeById
 } from "../anilist/anilist.service.js";
 
-// --------------------------------------------------
-// Find local anime by AniList ID
-// --------------------------------------------------
+import { query } from "../../database/database.js";
 
-async function getLocalAnimeByAniListId(
+export async function syncEpisodes(
   anilistId
 ) {
-  const result = await query(
-    `
-    SELECT *
-    FROM anime
-    WHERE anilist_id = $1
-    `,
-    [anilistId]
-  );
+  const id = Number(anilistId);
 
-  return result.rows[0] || null;
-}
-
-// --------------------------------------------------
-// Create or update season
-// --------------------------------------------------
-
-async function upsertSeason(
-  animeId,
-  seasonNumber,
-  title = null,
-  description = null
-) {
-  const result = await query(
-    `
-    INSERT INTO seasons (
-      anime_id,
-      season_number,
-      title,
-      description
-    )
-    VALUES ($1, $2, $3, $4)
-
-    ON CONFLICT (anime_id, season_number)
-    DO UPDATE SET
-      title = EXCLUDED.title,
-      description = EXCLUDED.description
-
-    RETURNING *
-    `,
-    [
-      animeId,
-      seasonNumber,
-      title,
-      description
-    ]
-  );
-
-  return result.rows[0];
-}
-
-// --------------------------------------------------
-// Create or update episode
-// --------------------------------------------------
-
-async function upsertEpisode(
-  seasonId,
-  episodeNumber
-) {
-  const result = await query(
-    `
-    INSERT INTO episodes (
-      season_id,
-      episode_number
-    )
-    VALUES ($1, $2)
-
-    ON CONFLICT (season_id, episode_number)
-    DO UPDATE SET
-      episode_number = EXCLUDED.episode_number
-
-    RETURNING *
-    `,
-    [
-      seasonId,
-      episodeNumber
-    ]
-  );
-
-  return result.rows[0];
-}
-
-// --------------------------------------------------
-// Synchronize episodes
-// --------------------------------------------------
-
-export async function syncEpisodesFromAniList(
-  anilistId
-) {
-  const numericId = Number(anilistId);
-
-  if (!Number.isInteger(numericId)) {
+  if (
+    !Number.isInteger(id) ||
+    id <= 0
+  ) {
     throw new Error(
       "Invalid AniList ID"
     );
   }
 
-  const anilistAnime =
-    await getAnimeById(numericId);
+  const anime =
+    await getAnimeById(id);
 
-  if (!anilistAnime) {
-    return null;
+  if (!anime) {
+    throw new Error(
+      "Anime not found on AniList"
+    );
+  }
+
+  const animeResult =
+    await query(
+      `
+        SELECT
+          id,
+          anilist_id,
+          title_romaji,
+          title_english,
+          title_native,
+          total_episodes
+        FROM anime
+        WHERE anilist_id = $1
+        LIMIT 1
+      `,
+      [id]
+    );
+
+  if (
+    animeResult.rows.length === 0
+  ) {
+    throw new Error(
+      "Anime must be synced to the local database before syncing episodes"
+    );
   }
 
   const localAnime =
-    await getLocalAnimeByAniListId(
-      numericId
+    animeResult.rows[0];
+
+  const seasonResult =
+    await query(
+      `
+        INSERT INTO seasons (
+          anime_id,
+          season_number,
+          title,
+          description
+        )
+        VALUES (
+          $1,
+          1,
+          $2,
+          $3
+        )
+        ON CONFLICT (
+          anime_id,
+          season_number
+        )
+        DO UPDATE SET
+          title = EXCLUDED.title,
+          description = EXCLUDED.description
+
+        RETURNING *
+      `,
+      [
+        localAnime.id,
+        anime?.season
+          ? String(anime.season)
+          : "Season 1",
+        anime?.description || null
+      ]
     );
 
-  if (!localAnime) {
-    throw new Error(
-      "Anime must be synchronized before episodes"
-    );
-  }
+  const season =
+    seasonResult.rows[0];
 
   const totalEpisodes =
-    Number(anilistAnime.episodes || 0);
+    Number(
+      anime?.episodes ||
+      localAnime.total_episodes ||
+      0
+    );
 
-  if (totalEpisodes <= 0) {
+  if (
+    !Number.isInteger(totalEpisodes) ||
+    totalEpisodes <= 0
+  ) {
     return {
-      anime: localAnime,
-      season: null,
+      animeId:
+        localAnime.id,
+      anilistId: id,
+      season,
+      episodesCreated: 0,
       episodes: []
     };
   }
-
-  // ------------------------------------------------
-  // AniList's season/year describes the anime's
-  // release season, not necessarily a DVD/streaming
-  // season structure.
-  //
-  // We therefore use Season 1 as the default local
-  // episode container unless a richer episode source
-  // is added later.
-  // ------------------------------------------------
-
-  const season =
-    await upsertSeason(
-      localAnime.id,
-      1,
-      null,
-      null
-    );
 
   const episodes = [];
 
@@ -161,71 +120,222 @@ export async function syncEpisodesFromAniList(
     episodeNumber <= totalEpisodes;
     episodeNumber++
   ) {
-    const episode =
-      await upsertEpisode(
-        season.id,
-        episodeNumber
+    const episodeResult =
+      await query(
+        `
+          INSERT INTO episodes (
+            season_id,
+            episode_number,
+            title,
+            description,
+            duration
+          )
+          VALUES (
+            $1,
+            $2,
+            $3,
+            $4,
+            $5
+          )
+          ON CONFLICT (
+            season_id,
+            episode_number
+          )
+          DO UPDATE SET
+            title = EXCLUDED.title,
+            description = EXCLUDED.description,
+            duration = EXCLUDED.duration
+
+          RETURNING *
+        `,
+        [
+          season.id,
+          episodeNumber,
+          `Episode ${episodeNumber}`,
+          null,
+          anime?.duration || null
+        ]
       );
 
-    episodes.push(episode);
+    episodes.push(
+      episodeResult.rows[0]
+    );
   }
 
   return {
-    anime: localAnime,
+    animeId:
+      localAnime.id,
+
+    anilistId: id,
+
     season,
+
+    episodesCreated:
+      episodes.length,
+
     episodes
   };
 }
 
-// --------------------------------------------------
-// Get synchronization summary
-// --------------------------------------------------
-
-export async function getEpisodeSyncSummary(
+export async function getEpisodes(
   animeId
 ) {
-  const animeResult = await query(
-    `
-    SELECT *
-    FROM anime
-    WHERE id = $1
-    `,
-    [animeId]
-  );
+  const id = Number(animeId);
 
-  if (!animeResult.rows.length) {
-    return null;
+  if (
+    !Number.isInteger(id) ||
+    id <= 0
+  ) {
+    throw new Error(
+      "Invalid anime ID"
+    );
   }
 
-  const seasonsResult = await query(
-    `
-    SELECT
-      s.id,
-      s.season_number,
-      s.title,
+  const animeResult =
+    await query(
+      `
+        SELECT
+          id,
+          anilist_id,
+          title_romaji,
+          title_english,
+          title_native
+        FROM anime
+        WHERE id = $1
+        LIMIT 1
+      `,
+      [id]
+    );
 
-      COUNT(e.id)::INTEGER AS episode_count
+  if (
+    animeResult.rows.length === 0
+  ) {
+    throw new Error(
+      "Anime not found"
+    );
+  }
 
-    FROM seasons s
+  const result =
+    await query(
+      `
+        SELECT
+          s.id AS season_id,
+          s.season_number,
+          s.title AS season_title,
 
-    LEFT JOIN episodes e
-      ON e.season_id = s.id
+          e.id AS episode_id,
+          e.episode_number,
+          e.title AS episode_title,
+          e.description,
+          e.duration,
+          e.thumbnail,
 
-    WHERE s.anime_id = $1
+          COALESCE(
+            wp.position_seconds,
+            0
+          ) AS position_seconds,
 
-    GROUP BY
-      s.id,
-      s.season_number,
-      s.title
+          COALESCE(
+            wp.duration_seconds,
+            e.duration,
+            0
+          ) AS duration_seconds,
 
-    ORDER BY
-      s.season_number ASC
-    `,
-    [animeId]
-  );
+          COALESCE(
+            wp.completed,
+            FALSE
+          ) AS completed
+
+        FROM seasons s
+
+        LEFT JOIN episodes e
+          ON e.season_id = s.id
+
+        LEFT JOIN watch_progress wp
+          ON wp.episode_id = e.id
+
+        WHERE s.anime_id = $1
+
+        ORDER BY
+          s.season_number ASC,
+          e.episode_number ASC
+      `,
+      [id]
+    );
+
+  const seasons = [];
+
+  for (
+    const row of result.rows
+  ) {
+    let season =
+      seasons.find(
+        (item) =>
+          item.seasonId ===
+          row.season_id
+      );
+
+    if (!season) {
+      season = {
+        seasonId:
+          row.season_id,
+
+        seasonNumber:
+          row.season_number,
+
+        title:
+          row.season_title,
+
+        episodes: []
+      };
+
+      seasons.push(season);
+    }
+
+    if (row.episode_id) {
+      season.episodes.push({
+        id:
+          row.episode_id,
+
+        episodeNumber:
+          row.episode_number,
+
+        title:
+          row.episode_title,
+
+        description:
+          row.description,
+
+        duration:
+          row.duration,
+
+        thumbnail:
+          row.thumbnail,
+
+        progress: {
+          positionSeconds:
+            Number(
+              row.position_seconds
+            ),
+
+          durationSeconds:
+            Number(
+              row.duration_seconds
+            ),
+
+          completed:
+            Boolean(
+              row.completed
+            )
+        }
+      });
+    }
+  }
 
   return {
-    anime: animeResult.rows[0],
-    seasons: seasonsResult.rows
+    anime:
+      animeResult.rows[0],
+
+    seasons
   };
 }
