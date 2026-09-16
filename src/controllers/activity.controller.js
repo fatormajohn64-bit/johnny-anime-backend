@@ -1,26 +1,38 @@
 import {
-  getActivity
+  getActivity as getActivityService
 } from "../services/library/activity.service.js";
 
-// --------------------------------------------------
-// Activity
-// --------------------------------------------------
-
-export async function getActivityFeed(
+export async function getActivity(
   req,
   res,
   next
 ) {
   try {
     const limit =
-      Number(req.query.limit || 20);
+      Number(
+        req.query.limit || 20
+      );
 
-    const activity =
-      await getActivity(limit);
+    if (
+      !Number.isInteger(limit) ||
+      limit < 1 ||
+      limit > 100
+    ) {
+      return res.status(400).json({
+        success: false,
+        error:
+          "Limit must be between 1 and 100"
+      });
+    }
 
-    res.json({
+    const result =
+      await getActivityService(
+        limit
+      );
+
+    return res.json({
       success: true,
-      activity
+      result
     });
   } catch (error) {
     next(error);
