@@ -1,20 +1,20 @@
 import { Router } from "express";
 
 import {
-  syncEpisodes,
-  getEpisodes
+  syncEpisodesController,
+  getEpisodesController
 } from "../controllers/episode-sync.controller.js";
 
 const router = Router();
 
 router.post(
   "/anilist/:anilistId",
-  syncEpisodes
+  syncEpisodesController
 );
 
 router.get(
   "/anime/:animeId",
-  getEpisodes
+  getEpisodesController
 );
 
 export default router;
