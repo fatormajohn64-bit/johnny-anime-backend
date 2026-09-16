@@ -1,0 +1,31 @@
+export const routes = {
+  anime: "/api/anime",
+  library: "/api/library",
+  episodes: "/api",
+  videoSources: "/api/video-sources",
+  watchProgress: "/api/watch-progress",
+  player: "/api/player",
+  animeSync: "/api/anime-sync",
+  episodeSync: "/api/episode-sync",
+  downloads: "/api/downloads",
+  movies: "/api/movies",
+  dashboard: "/api/dashboard",
+  discovery: "/api/discovery",
+  favorites: "/api/favorites",
+  settings: "/api/settings",
+  activity: "/api/activity",
+  animeDetails: "/api/anime-details",
+  episodeNavigation: "/api/episode-navigation",
+  seasonNavigation: "/api/season-navigation",
+  episodeQueue: "/api/episode-queue",
+  continueWatching: "/api/continue-watching",
+  watchHistory: "/api/watch-history",
+  resume: "/api/resume",
+  playerCompletion: "/api/player-completion",
+  sourceSelection: "/api/source-selection",
+  downloadManager: "/api/download-manager",
+  databaseHealth: "/api/database",
+  maintenance: "/api/maintenance"
+};
+
+export default routes;
