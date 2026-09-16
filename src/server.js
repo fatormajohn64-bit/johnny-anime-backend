@@ -1,9 +1,11 @@
 import "dotenv/config";
+
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 
 import animeRoutes from "./routes/anime.routes.js";
+import { initializeDatabase } from "./database/schema.js";
 
 const app = express();
 
@@ -97,8 +99,23 @@ app.use((err, req, res, next) => {
 // Start server
 // --------------------------------------------------
 
-app.listen(PORT, () => {
-  console.log(
-    `Johnny Anime Vault Backend running on port ${PORT}`
-  );
-});
+async function startServer() {
+  try {
+    await initializeDatabase();
+
+    app.listen(PORT, () => {
+      console.log(
+        `Johnny Anime Vault Backend running on port ${PORT}`
+      );
+    });
+  } catch (error) {
+    console.error(
+      "Failed to initialize database:",
+      error
+    );
+
+    process.exit(1);
+  }
+}
+
+startServer();
