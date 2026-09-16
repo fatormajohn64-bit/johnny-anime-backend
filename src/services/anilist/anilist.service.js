@@ -1,6 +1,60 @@
 import { anilistConfig } from "../../config/api.js";
 import { httpJson } from "../../utils/http-client.js";
 
+
+// --------------------------------------------------
+// Validate search text
+// --------------------------------------------------
+
+function validateSearch(search) {
+  if (
+    typeof search !== "string"
+  ) {
+    throw new Error(
+      "Search must be a string"
+    );
+  }
+
+  const value =
+    search.trim();
+
+  if (!value) {
+    throw new Error(
+      "Search query is required"
+    );
+  }
+
+  if (value.length > 100) {
+    throw new Error(
+      "Search query is too long"
+    );
+  }
+
+  return value;
+}
+
+
+// --------------------------------------------------
+// Validate AniList ID
+// --------------------------------------------------
+
+function validateAnimeId(id) {
+  const animeId =
+    Number(id);
+
+  if (
+    !Number.isInteger(animeId) ||
+    animeId <= 0
+  ) {
+    throw new Error(
+      "Invalid AniList anime ID"
+    );
+  }
+
+  return animeId;
+}
+
+
 // --------------------------------------------------
 // AniList API request
 // --------------------------------------------------
@@ -27,12 +81,27 @@ async function anilistRequest(
   const data =
     response.data;
 
+  if (
+    !data ||
+    typeof data !== "object"
+  ) {
+    throw new Error(
+      "Invalid response from AniList"
+    );
+  }
+
   if (data.errors) {
     const message =
       data.errors?.[0]?.message ||
       "AniList request failed";
 
     throw new Error(message);
+  }
+
+  if (!data.data) {
+    throw new Error(
+      "AniList returned no data"
+    );
   }
 
   return data.data;
@@ -46,6 +115,9 @@ async function anilistRequest(
 export async function searchAnime(
   search
 ) {
+  const validatedSearch =
+    validateSearch(search);
+
   const query = `
     query ($search: String) {
       Page(
@@ -111,11 +183,13 @@ export async function searchAnime(
     await anilistRequest(
       query,
       {
-        search
+        search: validatedSearch
       }
     );
 
-  return data.Page.media;
+  return (
+    data.Page?.media || []
+  );
 }
 
 
@@ -126,6 +200,9 @@ export async function searchAnime(
 export async function getAnimeById(
   id
 ) {
+  const animeId =
+    validateAnimeId(id);
+
   const query = `
     query ($id: Int) {
       Media(
@@ -209,9 +286,9 @@ export async function getAnimeById(
     await anilistRequest(
       query,
       {
-        id: Number(id)
+        id: animeId
       }
     );
 
-  return data.Media;
+  return data.Media || null;
 }
