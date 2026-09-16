@@ -1,11 +1,7 @@
 import {
   syncEpisodesFromAniList,
-  getEpisodeSyncSummary
+  getEpisodesForAnime
 } from "../services/library/episode-sync.service.js";
-
-// --------------------------------------------------
-// Synchronize episodes
-// --------------------------------------------------
 
 export async function syncEpisodes(
   req,
@@ -14,9 +10,14 @@ export async function syncEpisodes(
 ) {
   try {
     const anilistId =
-      Number(req.params.anilistId);
+      Number(
+        req.params.anilistId
+      );
 
-    if (!Number.isInteger(anilistId)) {
+    if (
+      !Number.isInteger(anilistId) ||
+      anilistId <= 0
+    ) {
       return res.status(400).json({
         success: false,
         error: "Invalid AniList ID"
@@ -28,41 +29,30 @@ export async function syncEpisodes(
         anilistId
       );
 
-    if (!result) {
-      return res.status(404).json({
-        success: false,
-        error: "Anime not found on AniList"
-      });
-    }
-
-    res.json({
+    return res.json({
       success: true,
-      message:
-        "Episode structure synchronized",
-      anime: result.anime,
-      season: result.season,
-      count: result.episodes.length,
-      episodes: result.episodes
+      result
     });
   } catch (error) {
     next(error);
   }
 }
 
-// --------------------------------------------------
-// Synchronization summary
-// --------------------------------------------------
-
-export async function getSyncSummary(
+export async function getEpisodes(
   req,
   res,
   next
 ) {
   try {
     const animeId =
-      Number(req.params.animeId);
+      Number(
+        req.params.animeId
+      );
 
-    if (!Number.isInteger(animeId)) {
+    if (
+      !Number.isInteger(animeId) ||
+      animeId <= 0
+    ) {
       return res.status(400).json({
         success: false,
         error: "Invalid anime ID"
@@ -70,20 +60,13 @@ export async function getSyncSummary(
     }
 
     const result =
-      await getEpisodeSyncSummary(
+      await getEpisodesForAnime(
         animeId
       );
 
-    if (!result) {
-      return res.status(404).json({
-        success: false,
-        error: "Anime not found"
-      });
-    }
-
-    res.json({
+    return res.json({
       success: true,
-      ...result
+      result
     });
   } catch (error) {
     next(error);
