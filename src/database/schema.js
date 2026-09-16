@@ -244,6 +244,21 @@ export async function initializeDatabase() {
 
 
     -- --------------------------------------------------
+    -- App Settings
+    -- --------------------------------------------------
+
+    CREATE TABLE IF NOT EXISTS app_settings (
+      id SERIAL PRIMARY KEY,
+
+      setting_key TEXT NOT NULL UNIQUE,
+
+      setting_value TEXT,
+
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+
+    -- --------------------------------------------------
     -- Indexes
     -- --------------------------------------------------
 
@@ -285,6 +300,10 @@ export async function initializeDatabase() {
 
     CREATE INDEX IF NOT EXISTS idx_favorites_movie_id
       ON favorites(movie_id);
+
+
+    CREATE INDEX IF NOT EXISTS idx_app_settings_key
+      ON app_settings(setting_key);
   `);
 
   console.log("Database initialized");
