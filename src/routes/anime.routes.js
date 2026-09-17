@@ -7,7 +7,14 @@ import {
 
 const router = Router();
 
-router.get("/search", search);
-router.get("/:id", getById);
+router.get(
+  "/search",
+  search
+);
+
+router.get(
+  "/:id",
+  getById
+);
 
 export default router;
